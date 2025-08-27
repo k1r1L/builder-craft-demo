@@ -1,11 +1,10 @@
-import { useEffect } from "react";
 import { useForm, useController } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { postField } from "../../services/FieldService";
-import { DEFAULT_CHOICES, MAX_CHOICES } from "../../constants/field";
+import { DEFAULT_CHOICES, INPUT_TYPE_DEBOUNCE_MS, MAX_CHOICES, STORAGE_KEY } from "../../constants/field";
 import { normalizeChoices } from "../../utils/normalizeChoices";
 import { Body, Card, Footer, Header, RowLabel } from "../styled";
-import type { FieldFormValues } from "./types";
+import { FIELD_KEYS, type FieldFormValues } from "./types";
 import LabelField from "../LabelField/LabelField";
 import TypeField from "../TypeField/TypeField";
 import DefaultValueField from "../DefaultValueField/DefaultValueField";
@@ -13,12 +12,21 @@ import ChoicesField from "../ChoicesField/ChoicesField";
 import OrderField from "../OrderField/OrderField";
 import Actions from "../Actions/Actions";
 import { useFieldBuilderResolver } from "./useFieldBuilderResolver";
+import useDebounce from "../../constants/useDebounce";
+import { useEffect } from "react";
+import { isPlainObject } from "../../utils/isPlainObject";
 
 export default function FieldBuilder() {
   const { t } = useTranslation();
   const resolver = useFieldBuilderResolver();
+  const debouncedSave = useDebounce<(vals: FieldFormValues) => void>(
+    (vals) => {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(vals));
+    },
+    INPUT_TYPE_DEBOUNCE_MS
+  );
 
-  const { control, handleSubmit, getValues, setValue, setError, clearErrors, formState } =
+  const { control, handleSubmit, getValues, setValue, setError, clearErrors, formState, watch } =
     useForm<FieldFormValues>({
       mode: "onBlur",
       resolver: resolver,
@@ -58,9 +66,6 @@ export default function FieldBuilder() {
     clearErrors("choicesText");
     return true;
   }
-
-  // TODO: Delete this?
-  useEffect(() => { validateChoices(); }, []);
 
   const onSubmit = handleSubmit(async (values) => {
     if (!validateChoices()) return;
@@ -110,6 +115,32 @@ export default function FieldBuilder() {
     orderCtl.field.onChange("alphabetical");
     clearErrors();
   }
+
+  useEffect(() => {
+    const raw = localStorage.getItem("field-builder:draft");
+    if (!raw) return;
+  
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      if (!isPlainObject(parsed)) return;
+  
+      const draft = parsed as Partial<FieldFormValues>;
+  
+      FIELD_KEYS.forEach((key) => {
+        if (key in draft) {
+          const val = draft[key as keyof FieldFormValues] as FieldFormValues[typeof key];
+          setValue(key, val, { shouldDirty: false });
+        }
+      });
+    } catch {
+      console.error("Parsing draft failed!");
+    }
+  }, [setValue]);
+
+  useEffect(() => {
+    const sub = watch((vals) => debouncedSave(vals as FieldFormValues));
+    return () => sub.unsubscribe();
+  }, [watch, debouncedSave]);
 
   return (
     <Card role="form" aria-labelledby="field-builder-title">

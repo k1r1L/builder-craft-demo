@@ -8,7 +8,6 @@ export type FieldPayload = {
   };
   
   const ENDPOINT = import.meta.env.VITE_POST_ENDPOINT as string;
-  console.log(ENDPOINT);
   
   export async function postField(payload: FieldPayload) {
     if (!ENDPOINT) throw new Error("Missing VITE_POST_ENDPOINT");

@@ -4,5 +4,6 @@ export type ActionsProps = {
   onSave: () => void;
   onCancel: () => void;
   onClear: () => void;
+  isLoading: boolean;
 };
   
