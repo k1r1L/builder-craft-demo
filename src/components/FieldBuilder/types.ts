@@ -1,8 +1,8 @@
-import { DEFAULT_CHOICES, type OrderOption } from "../../constants/field";
+import { ALPHABETICAL_ORDER_OPTION, AS_ENTERED_ORDER_OPTION, DEFAULT_CHOICES } from "../../constants/field";
 
 export interface FieldFormValues {
   label: string;
-  type: "multi-select";
+  type: FieldType;
   required: boolean;
   defaultValue: string;
   choicesText: string;
@@ -18,6 +18,8 @@ export const FIELD_KEYS = [
   "order",
 ] as const;
 
+export type FieldType = "multi-select" | "single-select";
+export const TYPE_OPTIONS: FieldType[] = ["multi-select", "single-select"];
 export type FieldKey = typeof FIELD_KEYS[number];
 export type FieldDraft = Partial<FieldFormValues>;
 
@@ -29,3 +31,10 @@ export const BUILDER_DEFAULT_VALUES: FieldFormValues = {
   choicesText: DEFAULT_CHOICES.join("\n"),
   order: "alphabetical",
 }
+
+export const ORDER_OPTIONS = [
+  { value: ALPHABETICAL_ORDER_OPTION, labelKey: "alphabetical" },
+  { value: AS_ENTERED_ORDER_OPTION, labelKey: "asEntered" },
+] as const;
+
+export type OrderOption = typeof ORDER_OPTIONS[number]["value"];

@@ -1,17 +1,44 @@
 import type { Resolver } from "react-hook-form";
 import * as yup from "yup";
-import type { FieldFormValues } from "./types";
+import type { FieldFormValues, FieldType, OrderOption } from "./types";
 import { yupResolver } from "@hookform/resolvers/yup";
-import { ALPHABETICAL_ORDER_OPTION, AS_ENTERED_ORDER_OPTION } from "../../constants/field";
+import { MAX_CHOICES } from "../../constants/field";
 
 export const useFieldBuilderResolver = (): Resolver<FieldFormValues> => {
   const schema: yup.ObjectSchema<FieldFormValues> = yup.object({
     label: yup.string().trim().required("errors.labelRequired"),
-    type: yup.mixed<"multi-select">().oneOf(["multi-select"]).required(),
+    type: yup.mixed<FieldType>().oneOf(["multi-select", "single-select"]).required(),
     required: yup.boolean().default(true),
     defaultValue: yup.string().trim().default(""),
-    choicesText: yup.string().default(""),
-    order: yup.mixed<"alphabetical" | "as-entered">().oneOf([ALPHABETICAL_ORDER_OPTION, AS_ENTERED_ORDER_OPTION]).required(),
+    choicesText: yup
+    .string()
+    .default("")
+    .test("choices-validation", function (val) {
+      const { createError } = this;
+
+      const lines = (val ?? "")
+        .split(/\r?\n/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      if (lines.length > MAX_CHOICES) {
+        return createError({
+          message: `No more than ${MAX_CHOICES} choices allowed.`,
+        });
+      }
+
+      const set = new Set(lines);
+      if (set.size !== lines.length) {
+        return createError({
+          message: "Duplicate choices are not allowed.",
+        });
+      }
+
+      return true;
+    }),
+    order: yup.mixed<OrderOption>()
+      .oneOf(["alphabetical", "as-entered"])
+      .required(),
   });
 
   return yupResolver(schema);

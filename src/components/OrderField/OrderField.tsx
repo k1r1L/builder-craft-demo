@@ -1,7 +1,7 @@
 import { Select } from "./styled";
 import { useTranslation } from "react-i18next";
 import type { OrderFieldProps } from "./types";
-import { ORDER_OPTIONS, type OrderOption } from "../../constants/field";
+import { ORDER_OPTIONS, type OrderOption } from "../FieldBuilder/types";
 
 export default function OrderField({ id, value, onChange }: OrderFieldProps) {
   const { t } = useTranslation();

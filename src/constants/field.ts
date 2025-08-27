@@ -13,11 +13,4 @@ export const INPUT_TYPE_DEBOUNCE_MS = 400 as const;
 export const CHOICE_CHAR_MAX_LENGTH = 40 as const;
 
 export const ALPHABETICAL_ORDER_OPTION = "alphabetical" as const;
-export const AS_ENTERED_ORDER_OPTION = "as-entered"
-
-export const ORDER_OPTIONS = [
-  { value: ALPHABETICAL_ORDER_OPTION, labelKey: "alphabetical" },
-  { value: AS_ENTERED_ORDER_OPTION, labelKey: "asEntered" },
-] as const;
-
-export type OrderOption = typeof ORDER_OPTIONS[number]["value"];
+export const AS_ENTERED_ORDER_OPTION = "as-entered";

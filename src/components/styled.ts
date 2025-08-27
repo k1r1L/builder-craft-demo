@@ -37,7 +37,6 @@ export const Body = styled.div`
 
 export const RowLabel = styled.label`
   padding-top: ${({ theme }) => theme.spacing(2.5)};
-  color: ${({ theme }) => theme.colors.muted};
 
   ${({ theme }) => theme.media.sm} {
     padding-top: 0;

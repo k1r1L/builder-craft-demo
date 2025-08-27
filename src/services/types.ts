@@ -1,9 +1,10 @@
+import type { FieldType, OrderOption } from "../components/FieldBuilder/types";
+
 export type FieldPayload = {
   label: string;
-  type: "multi-select";
+  type: FieldType;
   required: boolean;
   defaultValue: string;
   choices: string[];
-  order: "alphabetical" | "as-entered";
+  order: OrderOption;
 };
-  

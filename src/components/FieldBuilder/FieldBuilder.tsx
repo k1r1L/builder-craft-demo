@@ -1,3 +1,4 @@
+import { useCallback, useEffect } from "react";
 import { useForm, useController } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { postField } from "../../services/FieldService";
@@ -7,29 +8,48 @@ import {
   DEFAULT_VALUE_NAME_FIELD,
   INPUT_TYPE_DEBOUNCE_MS,
   LABEL_NAME_FIELD,
-  MAX_CHOICES,
   ORDER_NAME_FIELD,
   REQUIRED_NAME_FIELD,
   STORAGE_KEY,
   TYPE_NAME_FIELD
 } from "../../constants/field";
 import { normalizeChoices } from "../../utils/normalizeChoices";
+import { isPlainObject } from "../../utils/isPlainObject";
 import { Body, Card, Footer, Header, RowLabel } from "../styled";
-import { BUILDER_DEFAULT_VALUES, FIELD_KEYS, type FieldFormValues } from "./types";
+import { BUILDER_DEFAULT_VALUES, type FieldFormValues } from "./types";
 import LabelField from "../LabelField/LabelField";
 import TypeField from "../TypeField/TypeField";
 import DefaultValueField from "../DefaultValueField/DefaultValueField";
 import ChoicesField from "../ChoicesField/ChoicesField";
 import OrderField from "../OrderField/OrderField";
 import Actions from "../Actions/Actions";
-import { useFieldBuilderResolver } from "./useFieldBuilderResolver";
 import useDebounce from "../../constants/useDebounce";
-import { useEffect } from "react";
-import { isPlainObject } from "../../utils/isPlainObject";
+import { useFieldBuilderResolver } from "./useFieldBuilderResolver";
 
 export default function FieldBuilder() {
   const { t } = useTranslation();
-  const resolver = useFieldBuilderResolver();
+  const resolver = useFieldBuilderResolver(); 
+
+  const {
+    control,
+    handleSubmit,
+    setValue,
+    reset,
+    formState,
+    watch,
+  } = useForm<FieldFormValues>({
+    mode: "onBlur",
+    resolver,
+    defaultValues: BUILDER_DEFAULT_VALUES,
+  });
+
+  const labelCtl = useController({ name: LABEL_NAME_FIELD,   control });
+  const typeCtl = useController({ name: TYPE_NAME_FIELD, control });
+  const requiredCtl= useController({ name: REQUIRED_NAME_FIELD,control });
+  const defaultCtl = useController({ name: DEFAULT_VALUE_NAME_FIELD, control });
+  const choicesCtl = useController({ name: CHOICES_NAME_FIELD, control });
+  const orderCtl   = useController({ name: ORDER_NAME_FIELD,   control });
+
   const debouncedSave = useDebounce<(vals: FieldFormValues) => void>(
     (vals) => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(vals));
@@ -37,56 +57,41 @@ export default function FieldBuilder() {
     INPUT_TYPE_DEBOUNCE_MS
   );
 
-  const { control, handleSubmit, getValues, setValue, setError, clearErrors, formState, watch } =
-    useForm<FieldFormValues>({
-      mode: "onBlur",
-      resolver: resolver,
-      defaultValues: BUILDER_DEFAULT_VALUES,
-    });
-
-  const labelCtl = useController({ name: LABEL_NAME_FIELD, control });
-  const requiredCtl = useController({ name: REQUIRED_NAME_FIELD, control });
-  const defaultCtl = useController({ name: DEFAULT_VALUE_NAME_FIELD, control });
-  const choicesCtl = useController({ name: CHOICES_NAME_FIELD, control });
-  const orderCtl = useController({ name: ORDER_NAME_FIELD, control });
-
-  const validateChoices = (): boolean => {
-    const choices = normalizeChoices(getValues(CHOICES_NAME_FIELD));
-    const raw = getValues(CHOICES_NAME_FIELD).split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
-    const set = new Set(raw);
-    const hasDupes = set.size !== raw.length;
-
-    if (choices.length > MAX_CHOICES) {
-      setError(CHOICES_NAME_FIELD, { type: "validate", message: t("errors.tooMany", { max: MAX_CHOICES }) });
-      return false;
+  useEffect(() => {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    try {
+      const parsed: unknown = JSON.parse(raw);
+      if (!isPlainObject(parsed)) return;
+      reset({ ...BUILDER_DEFAULT_VALUES, ...(parsed as Partial<FieldFormValues>) }, { keepDirty: false });
+    } catch {
+      console.error("Failed parsing json data")
     }
-    if (hasDupes) {
-      setError(CHOICES_NAME_FIELD, { type: "validate", message: t("errors.dupes") });
-      return false;
-    }
-    clearErrors(CHOICES_NAME_FIELD);
-    return true;
-  }
+  }, [reset]);
 
-  const onSubmit = handleSubmit(async (values) => {
-    if (!validateChoices()) return;
+  useEffect(() => {
+    const sub = watch((vals) => debouncedSave(vals as FieldFormValues));
+    return () => sub.unsubscribe();
+  }, [watch, debouncedSave]);
 
+  const onSubmit = useCallback(handleSubmit(async (values) => {
     let choices = normalizeChoices(values.choicesText);
-    const dv = values.defaultValue?.trim();
+    const dv = values.defaultValue.trim();
 
     if (dv && !choices.includes(dv)) {
       choices = [...choices, dv];
       setValue(CHOICES_NAME_FIELD, choices.join("\n"), { shouldDirty: false });
     }
 
-    const ordered = values.order === ALPHABETICAL_ORDER_OPTION
-      ? [...choices].sort((a, b) => a.localeCompare(b))
-      : choices;
+    const ordered =
+      values.order === ALPHABETICAL_ORDER_OPTION
+        ? [...choices].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }))
+        : choices;
 
     try {
       await postField({
         label: values.label.trim(),
-        type: "multi-select",
+        type: values.type,
         required: values.required,
         defaultValue: dv ?? "",
         choices: ordered,
@@ -97,51 +102,23 @@ export default function FieldBuilder() {
       console.error(e);
       alert(t("alerts.failed"));
     }
-  });
+  }), [handleSubmit, setValue, t]);
 
-  const handleOnClear = () => {
-    setValue(LABEL_NAME_FIELD, "");
-    setValue("type", "multi-select");
-    setValue(REQUIRED_NAME_FIELD, true);
-    setValue(DEFAULT_VALUE_NAME_FIELD, "");
-    setValue(CHOICES_NAME_FIELD, "");
-    setValue(ORDER_NAME_FIELD, ALPHABETICAL_ORDER_OPTION);
-    clearErrors();
-  }
+  const handleOnClear = useCallback(() => {
+    reset(BUILDER_DEFAULT_VALUES, { keepDirty: false, keepErrors: false });
+    localStorage.removeItem(STORAGE_KEY);
+  }, [reset]);
 
-  const handleOnCancel = () => {
-    labelCtl.field.onChange("");
-    defaultCtl.field.onChange("");
-    choicesCtl.field.onChange("");
-    orderCtl.field.onChange(ALPHABETICAL_ORDER_OPTION);
-    clearErrors();
-  }
-
-  useEffect(() => {
-    const raw = localStorage.getItem("field-builder:draft");
-    if (!raw) return;
-  
-    try {
-      const parsed: unknown = JSON.parse(raw);
-      if (!isPlainObject(parsed)) return;
-  
-      const draft = parsed as Partial<FieldFormValues>;
-  
-      FIELD_KEYS.forEach((key) => {
-        if (key in draft) {
-          const val = draft[key as keyof FieldFormValues] as FieldFormValues[typeof key];
-          setValue(key, val, { shouldDirty: false });
-        }
-      });
-    } catch {
-      console.error("Parsing draft failed!");
-    }
-  }, [setValue]);
-
-  useEffect(() => {
-    const sub = watch((vals) => debouncedSave(vals as FieldFormValues));
-    return () => sub.unsubscribe();
-  }, [watch, debouncedSave]);
+  const handleOnCancel = useCallback(() => {
+    reset({
+      label: "",
+      type: "multi-select",
+      required: requiredCtl.field.value,
+      defaultValue: "",
+      choicesText: "",
+      order: ALPHABETICAL_ORDER_OPTION,
+    }, { keepDirty: false, keepErrors: false });
+  }, [reset, requiredCtl.field.value]);
 
   return (
     <Card role="form" aria-labelledby="field-builder-title">
@@ -159,10 +136,11 @@ export default function FieldBuilder() {
 
         <RowLabel htmlFor={TYPE_NAME_FIELD}>{t("type")}</RowLabel>
         <TypeField
-          id="type"
-          value="multi-select"
+          id={TYPE_NAME_FIELD}
+          value={typeCtl.field.value}
           required={!!requiredCtl.field.value}
           onChangeRequired={requiredCtl.field.onChange}
+          onChangeType={typeCtl.field.onChange}
         />
 
         <RowLabel htmlFor={DEFAULT_VALUE_NAME_FIELD}>{t(DEFAULT_VALUE_NAME_FIELD)}</RowLabel>
@@ -174,10 +152,9 @@ export default function FieldBuilder() {
 
         <RowLabel htmlFor={CHOICES_NAME_FIELD}>{t("choices")}</RowLabel>
         <ChoicesField
-          id="choices"
+          id={CHOICES_NAME_FIELD}
           value={choicesCtl.field.value}
           onChange={choicesCtl.field.onChange}
-          onBlur={() => validateChoices()}
           error={choicesCtl.fieldState.error?.message}
         />
 
