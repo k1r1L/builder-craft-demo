@@ -30,7 +30,7 @@ describe("FieldBuilder", () => {
      choicesInput.blur();
 
      // Assert
-     expect(await screen.findByText(/Duplicate choices/i)).toBeInTheDocument();
+     expect(await screen.findByText(/Duplicate choices are not allowed./i)).toBeInTheDocument();
    });
 });
 

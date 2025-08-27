@@ -38,7 +38,8 @@ export default function FieldBuilder() {
     formState,
     watch,
   } = useForm<FieldFormValues>({
-    mode: "onBlur",
+    mode: "onChange",
+    reValidateMode: "onChange",
     resolver,
     defaultValues: BUILDER_DEFAULT_VALUES,
   });

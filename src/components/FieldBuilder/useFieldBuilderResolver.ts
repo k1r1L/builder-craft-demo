@@ -14,22 +14,20 @@ export const useFieldBuilderResolver = (): Resolver<FieldFormValues> => {
     .string()
     .default("")
     .test("choices-validation", function (val) {
-      const { createError } = this;
-
       const lines = (val ?? "")
         .split(/\r?\n/)
         .map((s) => s.trim())
         .filter(Boolean);
 
       if (lines.length > MAX_CHOICES) {
-        return createError({
+        return this.createError({
           message: `No more than ${MAX_CHOICES} choices allowed.`,
         });
       }
 
       const set = new Set(lines);
       if (set.size !== lines.length) {
-        return createError({
+        return this.createError({
           message: "Duplicate choices are not allowed.",
         });
       }
