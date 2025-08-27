@@ -23,7 +23,7 @@ import DefaultValueField from "../DefaultValueField/DefaultValueField";
 import ChoicesField from "../ChoicesField/ChoicesField";
 import OrderField from "../OrderField/OrderField";
 import Actions from "../Actions/Actions";
-import useDebounce from "../../constants/useDebounce";
+import useDebounce from "../../hooks/useDebounce";
 import { useFieldBuilderResolver } from "./useFieldBuilderResolver";
 
 export default function FieldBuilder() {
