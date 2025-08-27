@@ -1,10 +1,21 @@
 import { useForm, useController } from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import { postField } from "../../services/FieldService";
-import { DEFAULT_CHOICES, INPUT_TYPE_DEBOUNCE_MS, MAX_CHOICES, STORAGE_KEY } from "../../constants/field";
+import {
+  ALPHABETICAL_ORDER_OPTION,
+  CHOICES_NAME_FIELD,
+  DEFAULT_VALUE_NAME_FIELD,
+  INPUT_TYPE_DEBOUNCE_MS,
+  LABEL_NAME_FIELD,
+  MAX_CHOICES,
+  ORDER_NAME_FIELD,
+  REQUIRED_NAME_FIELD,
+  STORAGE_KEY,
+  TYPE_NAME_FIELD
+} from "../../constants/field";
 import { normalizeChoices } from "../../utils/normalizeChoices";
 import { Body, Card, Footer, Header, RowLabel } from "../styled";
-import { FIELD_KEYS, type FieldFormValues } from "./types";
+import { BUILDER_DEFAULT_VALUES, FIELD_KEYS, type FieldFormValues } from "./types";
 import LabelField from "../LabelField/LabelField";
 import TypeField from "../TypeField/TypeField";
 import DefaultValueField from "../DefaultValueField/DefaultValueField";
@@ -30,40 +41,30 @@ export default function FieldBuilder() {
     useForm<FieldFormValues>({
       mode: "onBlur",
       resolver: resolver,
-      // TODO: Pass this as prop?
-      defaultValues: {
-        label: "",
-        type: "multi-select",
-        required: true,
-        defaultValue: "",
-        choicesText: DEFAULT_CHOICES.join("\n"),
-        order: "alphabetical",
-      },
+      defaultValues: BUILDER_DEFAULT_VALUES,
     });
 
-  // Controllers per field
-  const labelCtl = useController({ name: "label", control });
-  const requiredCtl = useController({ name: "required", control });
-  const defaultCtl = useController({ name: "defaultValue", control });
-  const choicesCtl = useController({ name: "choicesText", control });
-  const orderCtl = useController({ name: "order", control });
+  const labelCtl = useController({ name: LABEL_NAME_FIELD, control });
+  const requiredCtl = useController({ name: REQUIRED_NAME_FIELD, control });
+  const defaultCtl = useController({ name: DEFAULT_VALUE_NAME_FIELD, control });
+  const choicesCtl = useController({ name: CHOICES_NAME_FIELD, control });
+  const orderCtl = useController({ name: ORDER_NAME_FIELD, control });
 
   const validateChoices = (): boolean => {
-    const choices = normalizeChoices(getValues("choicesText"));
-    // de-dupe already occurs, but detect duplicates user typed (line-based):
-    const raw = getValues("choicesText").split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+    const choices = normalizeChoices(getValues(CHOICES_NAME_FIELD));
+    const raw = getValues(CHOICES_NAME_FIELD).split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
     const set = new Set(raw);
     const hasDupes = set.size !== raw.length;
 
     if (choices.length > MAX_CHOICES) {
-      setError("choicesText", { type: "validate", message: t("errors.tooMany", { max: MAX_CHOICES }) });
+      setError(CHOICES_NAME_FIELD, { type: "validate", message: t("errors.tooMany", { max: MAX_CHOICES }) });
       return false;
     }
     if (hasDupes) {
-      setError("choicesText", { type: "validate", message: t("errors.dupes") });
+      setError(CHOICES_NAME_FIELD, { type: "validate", message: t("errors.dupes") });
       return false;
     }
-    clearErrors("choicesText");
+    clearErrors(CHOICES_NAME_FIELD);
     return true;
   }
 
@@ -75,10 +76,10 @@ export default function FieldBuilder() {
 
     if (dv && !choices.includes(dv)) {
       choices = [...choices, dv];
-      setValue("choicesText", choices.join("\n"), { shouldDirty: false });
+      setValue(CHOICES_NAME_FIELD, choices.join("\n"), { shouldDirty: false });
     }
 
-    const ordered = values.order === "alphabetical"
+    const ordered = values.order === ALPHABETICAL_ORDER_OPTION
       ? [...choices].sort((a, b) => a.localeCompare(b))
       : choices;
 
@@ -99,12 +100,12 @@ export default function FieldBuilder() {
   });
 
   const handleOnClear = () => {
-    setValue("label", "");
+    setValue(LABEL_NAME_FIELD, "");
     setValue("type", "multi-select");
-    setValue("required", true);
-    setValue("defaultValue", "");
-    setValue("choicesText", "");
-    setValue("order", "alphabetical");
+    setValue(REQUIRED_NAME_FIELD, true);
+    setValue(DEFAULT_VALUE_NAME_FIELD, "");
+    setValue(CHOICES_NAME_FIELD, "");
+    setValue(ORDER_NAME_FIELD, ALPHABETICAL_ORDER_OPTION);
     clearErrors();
   }
 
@@ -112,7 +113,7 @@ export default function FieldBuilder() {
     labelCtl.field.onChange("");
     defaultCtl.field.onChange("");
     choicesCtl.field.onChange("");
-    orderCtl.field.onChange("alphabetical");
+    orderCtl.field.onChange(ALPHABETICAL_ORDER_OPTION);
     clearErrors();
   }
 
@@ -147,16 +148,16 @@ export default function FieldBuilder() {
       <Header id="field-builder-title">{t("fieldBuilder")}</Header>
 
       <Body>
-        <RowLabel htmlFor="label">{t("label")}</RowLabel>
+        <RowLabel htmlFor={LABEL_NAME_FIELD}>{t(LABEL_NAME_FIELD)}</RowLabel>
         <LabelField
-          id="label"
+          id={LABEL_NAME_FIELD}
           value={labelCtl.field.value}
           onChange={labelCtl.field.onChange}
           onBlur={labelCtl.field.onBlur}
           error={labelCtl.fieldState.error?.message ? t(labelCtl.fieldState.error.message) : undefined}
         />
 
-        <RowLabel htmlFor="type">{t("type")}</RowLabel>
+        <RowLabel htmlFor={TYPE_NAME_FIELD}>{t("type")}</RowLabel>
         <TypeField
           id="type"
           value="multi-select"
@@ -164,14 +165,14 @@ export default function FieldBuilder() {
           onChangeRequired={requiredCtl.field.onChange}
         />
 
-        <RowLabel htmlFor="defaultValue">{t("defaultValue")}</RowLabel>
+        <RowLabel htmlFor={DEFAULT_VALUE_NAME_FIELD}>{t(DEFAULT_VALUE_NAME_FIELD)}</RowLabel>
         <DefaultValueField
-          id="defaultValue"
+          id={DEFAULT_VALUE_NAME_FIELD}
           value={defaultCtl.field.value}
           onChange={defaultCtl.field.onChange}
         />
 
-        <RowLabel htmlFor="choices">{t("choices")}</RowLabel>
+        <RowLabel htmlFor={CHOICES_NAME_FIELD}>{t("choices")}</RowLabel>
         <ChoicesField
           id="choices"
           value={choicesCtl.field.value}
@@ -180,9 +181,9 @@ export default function FieldBuilder() {
           error={choicesCtl.fieldState.error?.message}
         />
 
-        <RowLabel htmlFor="order">{t("order")}</RowLabel>
+        <RowLabel htmlFor={ORDER_NAME_FIELD}>{t(ORDER_NAME_FIELD)}</RowLabel>
         <OrderField
-          id="order"
+          id={ORDER_NAME_FIELD}
           value={orderCtl.field.value}
           onChange={orderCtl.field.onChange}
         />
@@ -195,6 +196,7 @@ export default function FieldBuilder() {
           onSave={onSubmit}
           onCancel={handleOnCancel}
           onClear={handleOnClear}
+          isLoading={formState.isSubmitting}
         />
       </Footer>
     </Card>

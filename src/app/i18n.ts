@@ -7,6 +7,7 @@ const resources = {
       fieldBuilder: "Field Builder",
       label: "Label",
       type: "Type",
+      multiSelect: "Multi-select",
       required: "A value is required",
       defaultValue: "Default Value",
       choices: "Choices",
@@ -14,6 +15,7 @@ const resources = {
       alphabetical: "Display choices in Alphabetical",
       asEntered: "Display choices as Entered",
       save: "Save changes",
+      saving: "Saving...",
       cancel: "Or Cancel",
       clear: "Clear & Start Fresh",
       errors: {

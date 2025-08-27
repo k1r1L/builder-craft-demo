@@ -9,7 +9,7 @@ export default function Actions({ saving, canCancel, onSave, onCancel, onClear, 
   return (
     <>
       <Button variant="primary" onClick={onSave} disabled={saving} loading={isLoading}>
-        {saving ? "Saving..." : t("save")}
+        {saving ? t("saving") : t("save")}
       </Button>
       <Button variant="ghost" type="button" onClick={onCancel} disabled={cancelDisabled} aria-label="Cancel">
         {t("cancel")}

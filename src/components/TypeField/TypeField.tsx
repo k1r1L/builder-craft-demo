@@ -7,7 +7,7 @@ export default function TypeField({ id, required, onChangeRequired }: TypeFieldP
 
   return (
     <Row id={id}>
-      <div>Multi-select</div>
+      <div>{t("multiSelect")}</div>
       <TypeFieldLabel>
         <input type="checkbox" checked={required} onChange={e => onChangeRequired(e.target.checked)} />
         {t("required")}
